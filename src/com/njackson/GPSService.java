@@ -1,5 +1,12 @@
 package com.njackson;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
+
 import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.PendingIntent;
@@ -8,6 +15,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.ApplicationInfo;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -94,6 +102,19 @@ public class GPSService extends Service {
         //PebbleKit.closeAppOnPebble(getApplicationContext(), Constants.WATCH_UUID);
 
         _locationMgr.removeUpdates(onLocationChange);
+        
+
+        if ((getApplication().getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+	        // remove MockLocationProvider.mocLocationProvider from the location manager
+	        try {
+	            _locationMgr.removeTestProvider(MockLocationProvider.mocLocationProvider);
+	            Log.d(TAG, "removeTestProvider " + MockLocationProvider.mocLocationProvider + " OK");
+	        }
+	        catch (Exception e) {
+	        	Log.d(TAG, "Exception:"+e.getMessage());
+	        }
+        }
+       
     }
 
     // load the saved state
@@ -174,7 +195,41 @@ public class GPSService extends Service {
 
         // check to see if GPS is enabled
         if(checkGPSEnabled(_locationMgr)) {
-            _locationMgr.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 1, onLocationChange);
+            
+
+        	if ((getApplication().getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+	        	// try to remove MockLocationProvider.mocLocationProvider from the location manager if already here
+	            try {
+	                _locationMgr.removeTestProvider(MockLocationProvider.mocLocationProvider);
+	                Log.e(TAG, "removeTestProvider " + MockLocationProvider.mocLocationProvider + " OK");
+	            }
+	            catch (Exception e) {}            
+	            
+	            _locationMgr.addTestProvider(MockLocationProvider.mocLocationProvider, false, false,
+	                    false, false, true, true, true, 0, 5);
+	            _locationMgr.setTestProviderEnabled(MockLocationProvider.mocLocationProvider, true);
+	            _locationMgr.requestLocationUpdates(MockLocationProvider.mocLocationProvider, 0, 0, onLocationChange);
+	
+	            try {
+	
+	                List<String> data = new ArrayList<String>();
+	                InputStream is = getAssets().open("data.txt");
+	                BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+	                String line = null;
+	                while ((line = reader.readLine()) != null) {
+	                	Log.v(TAG, line);
+	                    data.add(line);
+	                }
+	                Log.e(TAG, data.size() + " lines");
+	                new MockLocationProvider(_locationMgr, data).start();
+	
+	            } catch (IOException e) {
+	            	Log.e(TAG, e.getMessage());
+	            }
+        	} else {
+        		_locationMgr.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 1, onLocationChange);
+        	}
+            
             // send the saved values directly to update pebble
             Intent broadcastIntent = new Intent();
             broadcastIntent.setAction(MainActivity.GPSServiceReceiver.ACTION_RESP);
@@ -192,7 +247,59 @@ public class GPSService extends Service {
         //PebbleKit.startAppOnPebble(getApplicationContext(), Constants.WATCH_UUID);
     }
 
+    public class MockLocationProvider extends Thread {
 
+    	private List<String> data;
+
+    	private LocationManager locationManager;
+
+    	public static final String mocLocationProvider = "GpsMockProvider";
+
+    	public MockLocationProvider(LocationManager locationManager,
+    	        List<String> data) throws IOException {
+
+    	    this.locationManager = locationManager;
+    	    //this.mocLocationProvider = mocLocationProvider;
+    	    this.data = data;
+    	}
+
+    	@Override
+    	public void run() {
+
+    	    for (String str : data) {
+    	        try {
+    	            Thread.sleep(1000);
+    	        } catch (InterruptedException e) {
+    	            e.printStackTrace();
+    	        }
+
+    	        // Set one position
+    	        String[] parts = str.split(",");
+    	        Long time = Long.valueOf(parts[0]);
+    	        Double latitude = Double.valueOf(parts[1]);
+    	        Double longitude = Double.valueOf(parts[2]);
+    	        Double altitude = Double.valueOf(parts[3]);
+    	        Float accuracy = Float.valueOf(parts[4]);
+    	        
+    	        Location location = new Location(mocLocationProvider);
+    	        location.setLatitude(latitude);
+    	        location.setLongitude(longitude);
+    	        location.setAltitude(altitude);
+    	        location.setAccuracy(accuracy);
+    	        location.setTime(1000*time);
+
+    	        //Log.e(TAG, location.toString());
+
+    	        // set the time in the location. If the time on this location
+    	        // matches the time on the one in the previous set call, it will be
+    	        // ignored
+    	        //location.setTime(System.currentTimeMillis());
+
+    	        locationManager.setTestProviderLocation(mocLocationProvider,
+    	                location);
+    	    }
+    	}
+    }
 
     @Override
     public IBinder onBind(Intent intent) {
