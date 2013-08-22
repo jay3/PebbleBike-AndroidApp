@@ -169,7 +169,7 @@ public class GPSService extends Service {
 	    	// GPS is running
 		    // reninit all properties
 	    	_this._myLocation = new AdvancedLocation(_this.getApplicationContext());
-	    	_this._myLocation.debugLevel = 1;
+	    	_this._myLocation.debugLevel = 2;
 	    	_this._myLocation.debugTagPrefix = "PB-";
 
 	    	_this.loadGPSStats();  	    	
@@ -182,7 +182,7 @@ public class GPSService extends Service {
         _liveTracking = new LiveTracking(getApplicationContext());
 
         _myLocation = new AdvancedLocation(getApplicationContext());
-        _myLocation.debugLevel = 1;
+        _myLocation.debugLevel = 2;
         _myLocation.debugTagPrefix = "PB-";
 
         loadGPSStats();
@@ -217,7 +217,7 @@ public class GPSService extends Service {
 	                BufferedReader reader = new BufferedReader(new InputStreamReader(is));
 	                String line = null;
 	                while ((line = reader.readLine()) != null) {
-	                	Log.v(TAG, line);
+	                	//Log.v(TAG, line);
 	                    data.add(line);
 	                }
 	                Log.e(TAG, data.size() + " lines");
@@ -287,8 +287,12 @@ public class GPSService extends Service {
     	        location.setAltitude(altitude);
     	        location.setAccuracy(accuracy);
     	        location.setTime(1000*time);
+    	        location.setSpeed(10 * (float) Math.random());
 
-    	        //Log.e(TAG, location.toString());
+    	        if (parts.length > 5) {
+                    String comment = parts[5];
+                    Log.e(TAG, location.toString() + " " + comment);  
+                }
 
     	        // set the time in the location. If the time on this location
     	        // matches the time on the one in the previous set call, it will be
