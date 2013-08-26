@@ -10,9 +10,10 @@ import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
-import android.text.format.DateFormat;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.LayoutInflater;
+import android.view.ViewGroup;
 import android.widget.Toast;
 import com.actionbarsherlock.app.ActionBar;
 import com.actionbarsherlock.app.SherlockFragment;
@@ -26,12 +27,13 @@ import com.google.android.gms.location.ActivityRecognitionClient;
 import com.google.android.gms.location.DetectedActivity;
 import com.google.android.gms.maps.model.LatLng;
 
+import com.njackson.util.AltitudeGraphReduce;
 import de.cketti.library.changelog.ChangeLog;
 
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends SherlockFragmentActivity  implements  GooglePlayServicesClient.ConnectionCallbacks,
         GooglePlayServicesClient.OnConnectionFailedListener, HomeActivity.OnButtonPressListener {
@@ -57,14 +59,19 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
     private boolean _googlePlayInstalled;
     private Fragment _mapFragment;
 
-    private int[] _altitudeBins;
-    private int _altitudeMax = 0;
-    private int _altitudeMin = 0;
-
-
     enum RequestType {
         START,
         STOP
+    }
+
+    static MainActivity instance;
+
+    public static MainActivity getInstance() {
+        return instance;
+    }
+
+    public Boolean activityRecognitionEnabled() {
+        return _activityRecognition;
     }
 
     // Listener for the fragment button press
@@ -72,30 +79,30 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
     public void onPressed(int sender, boolean value) {
         //To change body of implemented methods use File | Settings | File Templates.
         switch(sender) {
-//            case R.id.MAIN_AUTO_START_BUTTON:
-//                autoStartButtonClick(value);
-//                break;
             case R.id.MAIN_START_BUTTON:
                 startButtonClick(value);
                 break;
-//            case R.id.MAIN_UNITS_BUTTON:
-//                unitsButtonClick(value);
-//                break;
-//            case R.id.MAIN_LIVE_TRACKING_BUTTON:
-//                liveTrackingButtonClick(value);
-//                break;
-//            case R.id.MAIN_INSTALL_WATCHFACE_BUTTON:
-//                sendWatchFaceToPebble();
-//                break;
         }
     }
+
     public void loadPreferences() {
     	loadPreferences(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()));
     }
-    public static void loadPreferences(SharedPreferences prefs) {
+
+    public void loadPreferences(SharedPreferences prefs) {
         //setup the defaults
         _activityRecognition = prefs.getBoolean("ACTIVITY_RECOGNITION",false);
         _liveTracking = prefs.getBoolean("LIVE_TRACKING",false);
+
+        if(_activityRecognition)
+            initActivityRecognitionClient();
+        else
+            stopActivityRecogntionClient();
+
+            HomeActivity activity = getHomeScreen();
+        if(activity != null)
+            activity.setStartButtonVisibility(!_activityRecognition);
+
         try {
         	setConversionUnits(Integer.valueOf(prefs.getString("UNITS_OF_MEASURE", "0")));
         } catch (Exception e) {
@@ -103,25 +110,6 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
         }
     }
 
-    private void autoStartButtonClick(boolean value) {
-        _activityRecognition = value;
-        if(value) {
-            initActivityRecognitionClient();
-        }else {
-            stopActivityRecogntionClient();
-        }
-        SharedPreferences settings = getSharedPreferences(Constants.PREFS_NAME, 0);
-        SharedPreferences.Editor editor = settings.edit();
-        editor.putBoolean("ACTIVITY_RECOGNITION",_activityRecognition);
-        editor.commit();
-    }
-    private void liveTrackingButtonClick(boolean value) {
-    	_liveTracking = value;
-        SharedPreferences settings = getSharedPreferences(Constants.PREFS_NAME, 0);
-        SharedPreferences.Editor editor = settings.edit();
-        editor.putBoolean("LIVE_TRACKING", _liveTracking);
-        editor.commit();
-    }  
     private void startButtonClick(boolean value) {
         if(value) {
             startGPSService();
@@ -129,7 +117,7 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
             stopGPSService();
         }
     }
-    public static void setConversionUnits(int units) {
+    public void setConversionUnits(int units) {
         _units = units;
         
         if(units == Constants.IMPERIAL) {
@@ -141,24 +129,19 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
             _distanceConversion = (float)Constants.M_TO_KM;
             _altitudeConversion = (float)Constants.M_TO_M;
         }
-    }
 
-//    private void unitsButtonClick(boolean value) {
-//        if (value) {
-//            setConversionUnits(Constants.IMPERIAL);
-//        } else {
-//            setConversionUnits(Constants.METRIC);
-//        }
-//        SharedPreferences settings = getSharedPreferences(Constants.PREFS_NAME, 0);
-//        SharedPreferences.Editor editor = settings.edit();
-//        editor.putInt("UNITS_OF_MEASURE",_units);
-//        editor.commit();
-//        resendLastDataToPebble();
-//    }
+        // set the screen units
+        HomeActivity homeScreen = getHomeScreen();
+        if(homeScreen != null)
+            homeScreen.setUnits(units);
+    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        instance = this;
+
         setContentView(R.layout.main);
 
         final ActionBar actionBar = getSupportActionBar();
@@ -192,7 +175,6 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
             changeState(getIntent().getExtras().getInt("button"));
         }
 
-        _altitudeBins = new int[14];
     }
 
     @Override
@@ -351,35 +333,32 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
         }
         if (intent.hasExtra("TIME")) {
             long time = intent.getLongExtra("TIME",0);
-            Date date = new Date(time);
-            SimpleDateFormat formatter = new SimpleDateFormat("HH:mm:ss");
-            String dateFormatted = formatter.format(date);
+            //Log.d("PebbleBike",String.valueOf(TimeUnit.MILLISECONDS.toMinutes(time)));
+            String dateFormatted = String.format("%d:%02d:%02d",
+                    TimeUnit.MILLISECONDS.toHours(time),
+                    TimeUnit.MILLISECONDS.toMinutes(time) - TimeUnit.HOURS.toMinutes(TimeUnit.MILLISECONDS.toHours(time)),
+                    TimeUnit.MILLISECONDS.toSeconds(time) - TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(time)));
+
+
             homeScreen.setTime(dateFormatted);
         }
         if (intent.hasExtra("ALTITUDE")) {
             int altitude = (int)intent.getDoubleExtra("ALTITUDE", 0);
-            if(altitude > _altitudeMax)
-                _altitudeMax = altitude;
-            if(altitude < _altitudeMin)
-                _altitudeMin = altitude;
 
-            for(int n=0; n < _altitudeBins.length-1;n++){
-                if(_altitudeBins[n +1] > 0) {
-                    if(_altitudeBins[n] > 0)
-                        _altitudeBins[n] = (_altitudeBins[n] + _altitudeBins[n+1]) /2;
-                    else
-                        _altitudeBins[n] = _altitudeBins[n+1];
-                }
-            }
+            AltitudeGraphReduce alt = AltitudeGraphReduce.getInstance();
+            alt.addAltitude(altitude, intent.getLongExtra("TIME",0), intent.getFloatExtra("DISTANCE", 0));
 
-            _altitudeBins[13] = altitude;
-            homeScreen.setAltitude(_altitudeBins,_altitudeMax,_altitudeMin);
+            homeScreen.setAltitude(
+                    alt.getGraphData(),
+                    alt.getMax(),
+                    alt.getMin());
 
         }
     }
 
     private void ResetSavedGPSStats() {
     	GPSService.resetGPSStats(getSharedPreferences(Constants.PREFS_NAME, 0));
+        AltitudeGraphReduce.getInstance().restData();
     }
 
     private void setStartButtonText(String text) {
@@ -478,7 +457,7 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
         }
     }
 
-    private boolean checkServiceRunning() {
+    public boolean checkServiceRunning() {
 
         ActivityManager manager = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
         for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
