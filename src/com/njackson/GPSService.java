@@ -292,6 +292,7 @@ public class GPSService extends Service {
     	        location.setAccuracy(accuracy);
     	        location.setTime(1000*time);
     	        location.setSpeed(10 * (float) Math.random());
+    	        location.setBearing(360 * (float) Math.random());
 
     	        if (parts.length > 5) {
                     String comment = parts[5];
