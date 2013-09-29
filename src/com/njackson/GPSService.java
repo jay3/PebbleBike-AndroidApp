@@ -270,6 +270,8 @@ public class GPSService extends Service {
     	@Override
     	public void run() {
 
+    	    Location prevLocation = null;
+
     	    for (String str : data) {
     	        try {
     	            Thread.sleep(1000);
@@ -291,8 +293,15 @@ public class GPSService extends Service {
     	        location.setAltitude(altitude);
     	        location.setAccuracy(accuracy);
     	        location.setTime(1000*time);
-    	        location.setSpeed(10 * (float) Math.random());
-    	        location.setBearing(360 * (float) Math.random());
+    	        
+    	        if (prevLocation != null) {
+    	            
+    	            if (location.getTime() != prevLocation.getTime()) {
+    	                location.setSpeed(prevLocation.distanceTo(location) / ((location.getTime() - prevLocation.getTime())/1000f));
+    	            }
+
+    	            location.setBearing(prevLocation.bearingTo(location));
+    	        }
 
     	        if (parts.length > 5) {
                     String comment = parts[5];
@@ -306,6 +315,8 @@ public class GPSService extends Service {
 
     	        locationManager.setTestProviderLocation(mocLocationProvider,
     	                location);
+    	        
+    	        prevLocation = location;
     	    }
     	}
     }
