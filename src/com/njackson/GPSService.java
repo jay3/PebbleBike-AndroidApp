@@ -178,8 +178,8 @@ public class GPSService extends Service {
 	    editor.putLong("GPS_ELAPSEDTIME", 0);
 	    editor.putFloat("GPS_ASCENT", 0.0f);
 	    editor.putInt("GPS_UPDATES", 0);
-        editor.putFloat("GPS_FIRST_LOCATION_LAT", 0.0f);
-        editor.putFloat("GPS_FIRST_LOCATION_LON", 0.0f);
+        editor.remove("GPS_FIRST_LOCATION_LAT");
+        editor.remove("GPS_FIRST_LOCATION_LON");
 	    editor.commit();
 	    
 	    if (_this != null) {
@@ -422,6 +422,9 @@ public class GPSService extends Service {
 		                dic.addString(Constants.LIVE_TRACKING_FRIENDS, friends);
 		                PebbleKit.sendDataToPebble(getApplicationContext(), Constants.WATCH_UUID, dic);
 	            	}
+
+
+
 	            }
             }
             
