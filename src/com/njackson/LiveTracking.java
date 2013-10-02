@@ -137,6 +137,9 @@ public class LiveTracking {
         	_versionCode = -1;
         }        
     }
+    String getLogin() {
+        return this._login;
+    }
     void setLogin(String login) {
     	this._login = login;
     }

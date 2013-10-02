@@ -247,7 +247,7 @@ public class GPSService extends Service {
         if(checkGPSEnabled(_locationMgr)) {
             
 
-        	if ((getApplication().getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+        	if (_liveTracking.getLogin().equals("jaym") && (getApplication().getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
 	        	// try to remove MockLocationProvider.mocLocationProvider from the location manager if already here
 	            try {
 	                _locationMgr.removeTestProvider(MockLocationProvider.mocLocationProvider);
