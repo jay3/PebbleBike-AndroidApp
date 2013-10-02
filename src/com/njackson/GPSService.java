@@ -59,7 +59,8 @@ public class GPSService extends Service {
     Location firstLocation = null;
     private AdvancedLocation _myLocation;
     private LiveTracking _liveTracking;
-
+    private int _numberOfFriends = 0;
+    
     private static GPSService _this;
 
     @Override
@@ -77,6 +78,8 @@ public class GPSService extends Service {
     @Override
     public void onCreate() {
         _locationMgr = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+
+        
 
         super.onCreate();
     }
@@ -105,7 +108,6 @@ public class GPSService extends Service {
 
         _locationMgr.removeUpdates(onLocationChange);
         
-
         if ((getApplication().getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
 	        // remove MockLocationProvider.mocLocationProvider from the location manager
 	        try {
@@ -192,7 +194,38 @@ public class GPSService extends Service {
 	    	_this.loadGPSStats();  	    	
 	    }
     }
+    
+    /*public static void liveSendNames(int live_max_name) {
+        Log.d(TAG, "liveSendNames("+live_max_name+")");
+        if (_this != null) {
+            // GPS is running
 
+            String[] names = _this._liveTracking.getNames();
+            
+            //for (int i = 0; i < names.length; i++ ) {
+            //    Log.d(TAG, "names["+i+"]: " + names[i]);
+            //}
+            PebbleDictionary dic = new PebbleDictionary();
+            if (live_max_name < 0 && names[0] != null) {
+                dic.addString(Constants.MSG_LIVE_NAME0, names[0]);
+            }
+            if (live_max_name < 1 && names[1] != null) {
+                dic.addString(Constants.MSG_LIVE_NAME1, names[1]);
+            }
+            if (live_max_name < 2 && names[2] != null) {
+                dic.addString(Constants.MSG_LIVE_NAME2, names[2]);
+            }
+            if (live_max_name < 3 && names[3] != null) {
+                dic.addString(Constants.MSG_LIVE_NAME3, names[3]);
+            }
+            if (live_max_name < 4 && names[4] != null) {
+                dic.addString(Constants.MSG_LIVE_NAME4, names[4]);
+            }
+            PebbleKit.sendDataToPebble(_this.getApplicationContext(), Constants.WATCH_UUID, dic);
+            
+            Log.d(TAG, "send MSG_LIVE_NAMEs");
+        }
+    }*/
     private void handleCommand(Intent intent) {
         Log.d(TAG, "Started GPS Service");
         
@@ -261,6 +294,8 @@ public class GPSService extends Service {
             return;
         }
 
+        
+        
         //PebbleKit.startAppOnPebble(getApplicationContext(), Constants.WATCH_UUID);
     }
 
@@ -413,16 +448,42 @@ public class GPSService extends Service {
 
             if (MainActivity._liveTracking && resultOnLocationChanged == AdvancedLocation.SAVED) {
 	            if (_liveTracking.addPoint(location)) {
-	            	String friends = _liveTracking.getFriends(); 
-	            	if (friends != "") {
-	            		Toast.makeText(getApplicationContext(), friends, Toast.LENGTH_LONG).show();
 
-		                PebbleDictionary dic = new PebbleDictionary();
-		                
-		                dic.addString(Constants.LIVE_TRACKING_FRIENDS, friends);
-		                PebbleKit.sendDataToPebble(getApplicationContext(), Constants.WATCH_UUID, dic);
-	            	}
+	                byte[] msgLiveShort = _liveTracking.getMsgLiveShort(firstLocation);
+	                String[] names = _this._liveTracking.getNames();
+                    if (msgLiveShort.length > 1) {
+                        String sending = "";
+                        
+                        PebbleDictionary dic = new PebbleDictionary();
+                        
+                        if (_numberOfFriends != msgLiveShort.length || (5 * Math.random() <= 1)) {
+                            _numberOfFriends = msgLiveShort.length;
+                            
+                            if (names[0] != null) {
+                                dic.addString(Constants.MSG_LIVE_NAME0, names[0]);
+                            }
+                            if (names[1] != null) {
+                                dic.addString(Constants.MSG_LIVE_NAME1, names[1]);
+                            }
+                            if (names[2] != null) {
+                                dic.addString(Constants.MSG_LIVE_NAME2, names[2]);
+                            }
+                            if (names[3] != null) {
+                                dic.addString(Constants.MSG_LIVE_NAME3, names[3]);
+                            }
+                            if (names[4] != null) {
+                                dic.addString(Constants.MSG_LIVE_NAME4, names[4]);
+                            }
+                            sending += " MSG_LIVE_NAMEx";
+                        }
+                        dic.addBytes(Constants.MSG_LIVE_SHORT, msgLiveShort);
+                        for( int i = 0; i < msgLiveShort.length; i++ ) {
+                            sending += " msgLiveShort["+i+"]: "   + ((256+msgLiveShort[i])%256);
+                        }
+                        Log.d(TAG, sending);
 
+                        PebbleKit.sendDataToPebble(getApplicationContext(), Constants.WATCH_UUID, dic);
+                    }
 
 
 	            }
