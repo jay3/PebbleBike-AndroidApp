@@ -360,8 +360,11 @@ public class GPSService extends Service {
     	        // ignored
     	        //location.setTime(System.currentTimeMillis());
 
-    	        locationManager.setTestProviderLocation(mocLocationProvider,
-    	                location);
+    	        try {
+    	            locationManager.setTestProviderLocation(mocLocationProvider, location);
+    	        } catch (Exception e) {
+    	            Log.d(TAG, "Exception:"+e.getMessage());
+                }
     	        
     	        prevLocation = location;
     	    }
