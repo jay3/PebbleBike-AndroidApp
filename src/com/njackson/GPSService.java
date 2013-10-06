@@ -52,6 +52,7 @@ public class GPSService extends Service {
     private float _prevdistance = -1;
     private double _prevaltitude = -1;
     private long _prevtime = -1;
+    private long _lastSaveGPSTime = 0;
     private double _currentLat;
     private double _currentLon;
     double xpos = 0;
@@ -61,6 +62,9 @@ public class GPSService extends Service {
     private LiveTracking _liveTracking;
     
     private static GPSService _this;
+    
+    private int _refresh_interval = 1000;
+    private boolean _gpsStarted = false;
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -193,7 +197,14 @@ public class GPSService extends Service {
 	    	_this.loadGPSStats();  	    	
 	    }
     }
-    
+    public static void changeRefreshInterval(int refresh_interval) {
+        if (_this != null) {
+            // GPS is running
+            _this._refresh_interval = refresh_interval;
+            _this._requestLocationUpdates(refresh_interval);
+        }
+    }
+
     /*public static void liveSendNames(int live_max_name) {
         Log.d(TAG, "liveSendNames("+live_max_name+")");
         if (_this != null) {
@@ -276,7 +287,7 @@ public class GPSService extends Service {
 	            	Log.e(TAG, e.getMessage());
 	            }
         	} else {
-        		_locationMgr.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 1, onLocationChange);
+        		_requestLocationUpdates(intent.getIntExtra("REFRESH_INTERVAL", 1000));
         	}
             
             // send the saved values directly to update pebble
@@ -297,7 +308,16 @@ public class GPSService extends Service {
         
         //PebbleKit.startAppOnPebble(getApplicationContext(), Constants.WATCH_UUID);
     }
+    private void _requestLocationUpdates(int refresh_interval) {
+        Log.d(TAG, "_requestLocationUpdates("+refresh_interval+")");
+        _refresh_interval = refresh_interval;
 
+        if (_gpsStarted) {
+            _locationMgr.removeUpdates(onLocationChange);
+        }
+        _locationMgr.requestLocationUpdates(LocationManager.GPS_PROVIDER, _refresh_interval, 2, onLocationChange);
+        _gpsStarted = true;
+    }
     public class MockLocationProvider extends Thread {
 
     	private List<String> data;
@@ -446,6 +466,11 @@ public class GPSService extends Service {
                 broadcastIntent.putExtra("YPOS", ypos);
                 broadcastIntent.putExtra("BEARING", _myLocation.getBearing());
                 sendBroadcast(broadcastIntent);
+
+                if (_lastSaveGPSTime == 0 || (_myLocation.getTime() - _lastSaveGPSTime > 60000)) {
+                    saveGPSStats();
+                    _lastSaveGPSTime = _myLocation.getTime();
+                }
             }
 
             if (MainActivity._liveTracking && resultOnLocationChanged == AdvancedLocation.SAVED) {
