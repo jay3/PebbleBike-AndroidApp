@@ -325,6 +325,9 @@ public class GPSService extends Service {
     	private LocationManager locationManager;
 
     	public static final String mocLocationProvider = "GpsMockProvider";
+    	
+    	public long time0 = 0;
+    	public long t0 = 0;
 
     	public MockLocationProvider(LocationManager locationManager,
     	        List<String> data) throws IOException {
@@ -341,7 +344,7 @@ public class GPSService extends Service {
 
     	    for (String str : data) {
     	        try {
-    	            Thread.sleep(1000);
+    	            Thread.sleep(3000);
     	        } catch (InterruptedException e) {
     	            e.printStackTrace();
     	        }
@@ -349,6 +352,11 @@ public class GPSService extends Service {
     	        // Set one position
     	        String[] parts = str.split(",");
     	        Long time = Long.valueOf(parts[0]);
+    	        if (time0 == 0) {
+    	            t0 = System.currentTimeMillis() / 1000;
+    	            time0 = time;
+    	        }
+    	        time = t0 + time - time0;
     	        Double latitude = Double.valueOf(parts[1]);
     	        Double longitude = Double.valueOf(parts[2]);
     	        Double altitude = Double.valueOf(parts[3]);
