@@ -622,6 +622,8 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
                 activityType = "On Foot";
                 break;
         }
+        Log.d(TAG, "Activity type=" + type + ":" + activityType);
+        Toast.makeText(this, "Activity type=" + type + ":" + activityType, Toast.LENGTH_LONG).show();
 
         HomeActivity activity = getHomeScreen();
         if(activity != null)
@@ -635,7 +637,7 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
         _callbackIntent = PendingIntent.getService(getApplicationContext(), 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         if(_requestType == RequestType.START) {
             Log.d(TAG, "Start Recognition");
-            _mActivityRecognitionClient.requestActivityUpdates(30000, _callbackIntent);
+            _mActivityRecognitionClient.requestActivityUpdates(1000, _callbackIntent);
         } else if(_requestType == RequestType.STOP) {
             Log.d(TAG, "Stop Recognition");
             _mActivityRecognitionClient.removeActivityUpdates(_callbackIntent);
@@ -662,7 +664,7 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
             int activity = intent.getIntExtra("ACTIVITY_CHANGED", 0);
             updateActivityType(activity);
 
-            if(activity == DetectedActivity.ON_BICYCLE) {
+            if(activity == DetectedActivity.ON_FOOT) {
                 Log.d(TAG, "AutoStart");
                 startGPSService();
                 _lastCycling = new Date();
