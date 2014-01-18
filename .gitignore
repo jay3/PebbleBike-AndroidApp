@@ -19,6 +19,7 @@ local.properties
 .classpath
 .project
 
+*.iml
 .DS_Store
 /.idea/
 /PebbleBike-AndroidApp.iml

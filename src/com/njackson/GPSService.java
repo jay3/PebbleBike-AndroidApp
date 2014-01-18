@@ -16,6 +16,11 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.location.GpsStatus.NmeaListener;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -66,6 +71,8 @@ public class GPSService extends Service {
     private int _refresh_interval = 1000;
     private boolean _gpsStarted = false;
 
+    private SensorManager _mSensorMgr = null;
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         handleCommand(intent);
@@ -81,6 +88,7 @@ public class GPSService extends Service {
     @Override
     public void onCreate() {
         _locationMgr = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        _mSensorMgr = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
 
         
 
@@ -107,10 +115,17 @@ public class GPSService extends Service {
         
         removeServiceForeground();
         
+        if (!MainActivity.oruxmaps_autostart.equals("disable")) {
+            OruxMaps.stopRecord(getApplicationContext());
+        }
+        
         //PebbleKit.closeAppOnPebble(getApplicationContext(), Constants.WATCH_UUID);
 
         _locationMgr.removeUpdates(onLocationChange);
+        _locationMgr.removeNmeaListener(mNmeaListener);
         
+        _mSensorMgr.unregisterListener(mSensorListener);
+
         if ((getApplication().getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
 	        // remove MockLocationProvider.mocLocationProvider from the location manager
 	        try {
@@ -121,7 +136,6 @@ public class GPSService extends Service {
 	        	Log.d(TAG, "Exception:"+e.getMessage());
 	        }
         }
-       
     }
 
     // load the saved state
@@ -255,8 +269,6 @@ public class GPSService extends Service {
 
         // check to see if GPS is enabled
         if(checkGPSEnabled(_locationMgr)) {
-            
-
         	if (_liveTracking.getLogin().equals("jaym") && (getApplication().getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
 	        	// try to remove MockLocationProvider.mocLocationProvider from the location manager if already here
 	            try {
@@ -289,6 +301,28 @@ public class GPSService extends Service {
         	} else {
         		_requestLocationUpdates(intent.getIntExtra("REFRESH_INTERVAL", 1000));
         	}
+
+            SharedPreferences settings = getSharedPreferences(Constants.PREFS_NAME,0);
+            
+            if (MainActivity.oruxmaps_autostart.equals("continue")) {
+                OruxMaps.startRecordContinue(getApplicationContext());
+            } else if (MainActivity.oruxmaps_autostart.equals("new_segment")) {
+                OruxMaps.startRecordNewSegment(getApplicationContext());
+            } else if (MainActivity.oruxmaps_autostart.equals("new_track")) {
+                OruxMaps.startRecordNewTrack(getApplicationContext());
+            } else if (MainActivity.oruxmaps_autostart.equals("auto")) {
+                long last_start = settings.getLong("GPS_LAST_START", 0);
+                //Log.d(TAG, "GPS_LAST_START:" + last_start + " ts:" + System.currentTimeMillis());
+                if (System.currentTimeMillis() - last_start > 12 * 3600 * 1000) { // 12 hours
+                    OruxMaps.startRecordNewTrack(getApplicationContext());
+                } else {
+                    OruxMaps.startRecordNewSegment(getApplicationContext());
+                }
+            }
+            
+            SharedPreferences.Editor editor = settings.edit();
+            editor.putLong("GPS_LAST_START", System.currentTimeMillis());
+            editor.commit();
             
             // send the saved values directly to update pebble
             Intent broadcastIntent = new Intent();
@@ -304,6 +338,8 @@ public class GPSService extends Service {
             return;
         }
 
+        // delay between events in microseconds
+        _mSensorMgr.registerListener(mSensorListener, _mSensorMgr.getDefaultSensor(Sensor.TYPE_PRESSURE), 3000000);
         
         
         //PebbleKit.startAppOnPebble(getApplicationContext(), Constants.WATCH_UUID);
@@ -316,6 +352,13 @@ public class GPSService extends Service {
             _locationMgr.removeUpdates(onLocationChange);
         }
         _locationMgr.requestLocationUpdates(LocationManager.GPS_PROVIDER, _refresh_interval, 2, onLocationChange);
+        if (MainActivity.geoidHeight != 0.0) {
+            // already got a correction, use it
+            _myLocation.setGeoidHeight(MainActivity.geoidHeight);
+        } else {
+            // request Nmea updates to get a geoid height
+            _locationMgr.addNmeaListener(mNmeaListener);
+        }
         _gpsStarted = true;
     }
     public class MockLocationProvider extends Thread {
@@ -456,24 +499,7 @@ public class GPSService extends Service {
                 _prevtime = _myLocation.getTime();
             }
             if (send) {
-                Intent broadcastIntent = new Intent();
-                broadcastIntent.setAction(MainActivity.GPSServiceReceiver.ACTION_RESP);
-                broadcastIntent.addCategory(Intent.CATEGORY_DEFAULT);
-                broadcastIntent.putExtra("SPEED", _speed);
-                broadcastIntent.putExtra("DISTANCE", _distance);
-                broadcastIntent.putExtra("AVGSPEED", _averageSpeed);
-                broadcastIntent.putExtra("LAT",_currentLat);
-                broadcastIntent.putExtra("LON",_currentLon);
-                broadcastIntent.putExtra("ALTITUDE",   _myLocation.getAltitude()); // m
-                broadcastIntent.putExtra("ASCENT",     _myLocation.getAscent()); // m
-                broadcastIntent.putExtra("ASCENTRATE", (3600f * _myLocation.getAscentRate())); // in m/h
-                broadcastIntent.putExtra("SLOPE",      (100f * _myLocation.getSlope())); // in %
-                broadcastIntent.putExtra("ACCURACY",   _myLocation.getAccuracy()); // m
-                broadcastIntent.putExtra("TIME",_myLocation.getElapsedTime());
-                broadcastIntent.putExtra("XPOS", xpos);
-                broadcastIntent.putExtra("YPOS", ypos);
-                broadcastIntent.putExtra("BEARING", _myLocation.getBearing());
-                sendBroadcast(broadcastIntent);
+                broadcastLocation();
 
                 if (_lastSaveGPSTime == 0 || (_myLocation.getTime() - _lastSaveGPSTime > 60000)) {
                     saveGPSStats();
@@ -505,6 +531,84 @@ public class GPSService extends Service {
             
         }        
     };
+
+    NmeaListener mNmeaListener = new NmeaListener() {
+        @Override
+        public void onNmeaReceived(long timestamp, String nmea) {
+           //Log.d(TAG, "Received some nmea strings: " + nmea);
+           if (nmea.startsWith("$GPGGA")) {
+               // http://aprs.gids.nl/nmea/#gga
+               //Log.d(TAG, "geoid: " + nmea);
+
+               String[] strValues = nmea.split(",");
+               /*
+               Log.d(TAG, "nmea 7 nb sat: " + strValues[7]);
+               Log.d(TAG, "nmea 8 hdop: " + strValues[8]);
+               Log.d(TAG, "nmea 11 geoid_height: " + strValues[11]);
+               */
+               try {
+                   // Height of geoid above WGS84 ellipsoid
+                   double geoid_height = Double.parseDouble(strValues[11]);
+
+                   if (MainActivity.debug) Log.d(TAG, "nmea geoid_height: " + geoid_height);
+                   _myLocation.setGeoidHeight(geoid_height);
+                   MainActivity.geoidHeight = geoid_height;
+
+                   // no longer need Nmea updates
+                   _locationMgr.removeNmeaListener(mNmeaListener);
+               } catch (Exception e) {
+               }
+           }
+        }
+    };
+
+    private SensorEventListener mSensorListener = new SensorEventListener() {
+
+        @Override
+        public void onAccuracyChanged(Sensor sensor, int accuracy) {
+            //Log.d(TAG, "onAccuracyChanged" + accuracy);
+        }
+
+        @Override
+        public void onSensorChanged(SensorEvent event) {
+            //Log.d(TAG, "onSensorChanged sensor:" + event.sensor.getName() + " type:"+event.sensor.getType());
+
+            float pressure_value = 0.0f;
+            double altitude = 0.0f;
+
+            // we register to TYPE_PRESSURE, so we don't really need this test
+            if( Sensor.TYPE_PRESSURE == event.sensor.getType()) {
+                pressure_value = event.values[0];
+                altitude = SensorManager.getAltitude(SensorManager.PRESSURE_STANDARD_ATMOSPHERE, pressure_value);
+                if (MainActivity.debug) Log.d(TAG, "pressure_value=" + pressure_value + " altitude=" + altitude);
+
+                _myLocation.onAltitudeChanged(altitude);
+
+                broadcastLocation();
+            }
+        }
+    };
+    
+    private void broadcastLocation() {
+        Intent broadcastIntent = new Intent();
+        broadcastIntent.setAction(MainActivity.GPSServiceReceiver.ACTION_RESP);
+        broadcastIntent.addCategory(Intent.CATEGORY_DEFAULT);
+        broadcastIntent.putExtra("SPEED",       _myLocation.getSpeed());
+        broadcastIntent.putExtra("DISTANCE",    _myLocation.getDistance());
+        broadcastIntent.putExtra("AVGSPEED",    _myLocation.getAverageSpeed());
+        broadcastIntent.putExtra("LAT",         _myLocation.getLatitude());
+        broadcastIntent.putExtra("LON",         _myLocation.getLongitude());
+        broadcastIntent.putExtra("ALTITUDE",    _myLocation.getAltitude()); // m
+        broadcastIntent.putExtra("ASCENT",      _myLocation.getAscent()); // m
+        broadcastIntent.putExtra("ASCENTRATE",  (3600f * _myLocation.getAscentRate())); // in m/h
+        broadcastIntent.putExtra("SLOPE",       (100f * _myLocation.getSlope())); // in %
+        broadcastIntent.putExtra("ACCURACY",   _myLocation.getAccuracy()); // m
+        broadcastIntent.putExtra("TIME",        _myLocation.getElapsedTime());
+        broadcastIntent.putExtra("XPOS",        xpos);
+        broadcastIntent.putExtra("YPOS",        ypos);
+        broadcastIntent.putExtra("BEARING",     _myLocation.getBearing());
+        sendBroadcast(broadcastIntent);
+    }
 
     private void makeServiceForeground(String titre, String texte) {
         //http://stackoverflow.com/questions/3687200/implement-startforeground-method-in-android

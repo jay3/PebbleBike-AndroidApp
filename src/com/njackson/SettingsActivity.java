@@ -2,11 +2,14 @@ package com.njackson;
 
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.hardware.Sensor;
+import android.hardware.SensorManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.preference.ListPreference;
@@ -61,8 +64,23 @@ public class SettingsActivity extends PreferenceActivity implements OnSharedPref
             pref2.setTitle(pref2.getTitle() + " [your version]");
             pref2.setSummary(pref2.getSummary() + " This is the version compatible with your current Pebble firmware.");
         }
+
+        pref = findPreference("PREF_PRESSURE_INFO");
+        SensorManager mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        if (mSensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE) != null){
+            pref.setSummary("Pressure sensor available");
+        } else {
+            pref.setSummary("No pressure sensor");
+        }
+
+        pref = findPreference("PREF_GEOID_HEIGHT_INFO");
+        if (MainActivity.geoidHeight != 0) {
+            pref.setSummary("Correction: " + MainActivity.geoidHeight + "m");
+        } else {
+            pref.setSummary("No correction");
+        }
     }
-    
+
     private boolean install_watchface(int sdkVersion) {
         int versionCode;
     
@@ -80,9 +98,12 @@ public class SettingsActivity extends PreferenceActivity implements OnSharedPref
         Log.d(TAG, "peebleFirmwareVersion:" + MainActivity.pebbleFirmwareVersion);
         
         try {
-            String uriString = "http://labs.jayps.fr/pebblebike/pebblebike-1.3.0";
+            String uriString;
             if (sdkVersion == 2) {
+                uriString = "http://labs.jayps.fr/pebblebike/pebblebike-1.4.0-beta1";
                 uriString += "-sdk2";
+            } else {
+                uriString = "http://labs.jayps.fr/pebblebike/pebblebike-1.3.0";
             }
             uriString += ".pbw?and&v=" + versionCode;
             Log.d(TAG, "uriString:" + uriString);
@@ -124,6 +145,12 @@ public class SettingsActivity extends PreferenceActivity implements OnSharedPref
         Preference loginPref = findPreference("LIVE_TRACKING_LOGIN");
         loginPref.setSummary(login);
     }
+    private void _setOruxMapsSummary(SharedPreferences prefs) {
+        ListPreference oruxPref = (ListPreference) findPreference("ORUXMAPS_AUTO");
+        CharSequence listDesc = oruxPref.getEntry();
+        oruxPref.setSummary(listDesc);
+    }
+
 	@Override
     protected void onResume() {
         super.onResume();
@@ -134,6 +161,7 @@ public class SettingsActivity extends PreferenceActivity implements OnSharedPref
         _setUnitsSummary(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()));
         _setRefreshSummary(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()));
         _setLoginSummary(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()));
+        _setOruxMapsSummary(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()));
     }
 
     @Override
@@ -154,7 +182,10 @@ public class SettingsActivity extends PreferenceActivity implements OnSharedPref
         if (key.equals("LIVE_TRACKING_LOGIN")) {
             _setLoginSummary(sharedPreferences);
         }
-        
+        if (key.equals("ORUXMAPS_AUTO")) {
+            _setOruxMapsSummary(sharedPreferences);
+        }
+
         MainActivity activity = MainActivity.getInstance();
         if(activity != null)
             activity.loadPreferences(sharedPreferences);

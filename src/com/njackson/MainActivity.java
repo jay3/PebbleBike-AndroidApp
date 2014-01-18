@@ -6,6 +6,7 @@ import android.app.Dialog;
 import android.app.PendingIntent;
 import android.content.*;
 import android.net.Uri;
+import android.os.BatteryManager;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
@@ -18,6 +19,8 @@ import android.widget.Toast;
 import com.actionbarsherlock.app.ActionBar;
 import com.actionbarsherlock.app.SherlockFragment;
 import com.actionbarsherlock.app.SherlockFragmentActivity;
+import com.actionbarsherlock.view.MenuInflater;
+import com.actionbarsherlock.view.MenuItem;
 import com.getpebble.android.kit.PebbleKit;
 import com.getpebble.android.kit.PebbleKit.FirmwareVersionInfo;
 import com.getpebble.android.kit.util.PebbleDictionary;
@@ -45,6 +48,7 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
 
     private static boolean _activityRecognition = false;
     public static boolean _liveTracking = false;
+    public static String oruxmaps_autostart = "disable";
     
     public static int pebbleFirmwareVersion = 0;
     public static FirmwareVersionInfo pebbleFirmwareVersionInfo;
@@ -55,6 +59,9 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
     
     private long _sendDataToPebbleLastTime = 0;
     private static int _refresh_interval = 1000;
+    // Height of geoid above WGS84 ellipsoid
+    public static double geoidHeight = 0; // in m
+    public static int batteryLevel = -1;
     public static boolean debug = false;
 
     private static float _speedConversion = 0.0f;
@@ -102,6 +109,7 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
         //setup the defaults
         _activityRecognition = prefs.getBoolean("ACTIVITY_RECOGNITION",false);
         _liveTracking = prefs.getBoolean("LIVE_TRACKING",false);
+        oruxmaps_autostart = prefs.getString("ORUXMAPS_AUTO", "disable");
 
         if(_activityRecognition)
             initActivityRecognitionClient();
@@ -225,6 +233,9 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
             pebbleFirmwareVersionInfo = null;
         }
         Log.d(TAG, "pebbleFirmwareVersion=" + pebbleFirmwareVersion);
+        
+        IntentFilter batteryLevelFilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+        registerReceiver(batteryLevelReceiver, batteryLevelFilter);
     }
 
     @Override
@@ -295,6 +306,7 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
     
     private Intent _lastIntent = null;
     private void resendLastDataToPebble() {
+        sendBatteryLevel();
         sendDataToPebble(_lastIntent);
     }
     public void sendDataToPebble(Intent intent) {
@@ -690,7 +702,7 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
 
             if(intent.getAction().compareTo(ACTION_RESP) == 0) {
                 if (_sendDataToPebbleLastTime > 0 && (System.currentTimeMillis() - _sendDataToPebbleLastTime < _refresh_interval)) {
-                    Log.d(TAG, "skip sendDataToPebble");
+                    if (debug) Log.d(TAG, "skip sendDataToPebble");
                 } else {
                     _sendDataToPebbleLastTime = System.currentTimeMillis();
                     sendDataToPebble(intent);
@@ -769,5 +781,40 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
             //Do nothing
         }
     }
+    
+    @Override
+    public boolean onCreateOptionsMenu(com.actionbarsherlock.view.Menu menu) {
+        MenuInflater inflater = getSupportMenuInflater();
+        inflater.inflate(R.menu.activity_action_bar, menu);
+        return super.onCreateOptionsMenu(menu);
+    }
 
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch(item.getItemId()) {
+            case R.id.menu_settings :
+                startActivity(new Intent(getApplicationContext(), SettingsActivity.class));
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+    BroadcastReceiver batteryLevelReceiver = new BroadcastReceiver() {
+        public void onReceive(Context context, Intent intent) {
+            int rawlevel = intent.getIntExtra("level", -1);
+            int scale = intent.getIntExtra("scale", -1);
+            if (rawlevel >= 0 && scale > 0) {
+                batteryLevel = (rawlevel * 100) / scale;
+                sendBatteryLevel();
+            }
+            if (debug) Log.d(TAG, "battery rawlevel:" + rawlevel + " scale:" + scale + " batteryLevel:" + batteryLevel);
+         }
+    };
+    public void sendBatteryLevel() {
+        if (debug) Log.d(TAG, "sendBatteryLevel:" + batteryLevel);
+        
+        PebbleDictionary dic = new PebbleDictionary();
+        dic.addInt32(Constants.MSG_BATTERY_LEVEL, batteryLevel);
+        PebbleKit.sendDataToPebble(getApplicationContext(), Constants.WATCH_UUID, dic);
+    }
 }
