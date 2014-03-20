@@ -261,6 +261,7 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
     }
     @Override
     public void onDestroy() {
+    	super.onDestroy();
         Intent intent = new Intent(getApplicationContext(), BatteryService.class);
         stopService(intent);
         _batteryServiceRunning = false;
