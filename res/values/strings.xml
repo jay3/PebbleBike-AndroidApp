@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Pebble Bike</string>
-    <string name="MAIN_TITLE">Pebble Bike v1.4.0-beta1</string>
+    <string name="MAIN_TITLE">Pebble Bike v1.4.2</string>
     <string name="ACTIVITY_TYPE_TEXT">Activity Type</string>
     <string name="AUTO_START_TEXT">Auto Start</string>
     <string name="LIVE_TRACKING_TEXT">Live Tracking with JayPS</string>
@@ -11,7 +11,6 @@
     <string name="UNITS_TEXT_IMPERIAL">Miles</string>
     <string name="UNITS_TEXT_METRIC">Kilometers</string>
     <string name="TAB_TITLE_HOME">Home</string>
-    <string name="TAB_TITLE_MAP">Map</string>
     <string name="DISTANCE_LABEL_TEXT">DISTANCE</string>
     <string name="SPEED_LABEL_TEXT">SPEED</string>
     
@@ -36,6 +35,10 @@
     <string name="ORUXMAPS_AUTO_TITLE">Link OruxMaps start</string>
     <string name="ORUXMAPS_AUTO_DIALOG_TITLE">Link OruxMaps start</string>
     <string name="ORUXMAPS_AUTO_DEFAULT">disable</string>
+    
+    <string name="PREF_HRM_CATEGORY_TITLE">BLE Heart Rate Monitor</string>
+    <string name="PREF_HRM_TITLE">Sensor</string>
+    
 
     <string name="TIME_TEXT">TIME</string>
     <string name="AVG_SPEED_TEXT_IMPERIAL">AVG. MPH</string>
@@ -43,9 +46,6 @@
     <string name="GPS_STATUS_LABEL">GPS STATUS</string><string name="ALTITUDE_TEXT">ALTITUDE</string>
 
     <string name="PREF_INSTALL_CATEGORY_TITLE">Install Watchface</string>
-    <string name="PREF_INSTALL_WATCHFACE">For Pebble 1.x</string>
-    <string name="PREF_INSTALL_WATCHFACE_SUMMARY">Download watchface and install it on your Pebble. For Pebble firmware 1.x only.</string>
-
     <string name="PREF_INSTALL_WATCHFACE_SDK2">For Pebble 2.x</string>
     <string name="PREF_INSTALL_WATCHFACE_SDK2_SUMMARY">Download watchface and install it on your Pebble. For Pebble firmware 2.x only.</string>
 
@@ -65,5 +65,14 @@
     <string name="PREF_LIVE_TRACKING_PASSWORD_TITLE">Password</string>
     <string name="PREF_LIVE_TRACKING_PASSWORD_SUMMARY"></string>
     
-    
+    <!-- BLE HRM items -->
+    <string name="ble_unknown_device">Unknown device</string>
+    <string name="ble_error_bluetooth_not_supported">Bluetooth not supported.</string>
+    <string name="ble_not_supported">BLE is not supported</string>
+    <string name="ble_connect">Connect</string>
+    <string name="ble_disconnect">Disconnect</string>
+    <string name="ble_scan">Scan</string>
+    <string name="ble_stop">Stop</string>
+    <string name="ble_unknown_characteristic">Unknown characteristic</string>
+    <string name="ble_unknown_service">Unknown service</string>
 </resources>

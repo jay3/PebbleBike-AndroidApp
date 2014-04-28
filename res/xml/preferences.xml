@@ -6,12 +6,6 @@
    android:title="@string/PREF_INSTALL_CATEGORY_TITLE"
  >
     <Preference
-        android:key="pref_install"
-        android:title="@string/PREF_INSTALL_WATCHFACE"
-        android:summary="@string/PREF_INSTALL_WATCHFACE_SUMMARY"
-        />
-    
-    <Preference
         android:key="pref_install_sdk2"
         android:title="@string/PREF_INSTALL_WATCHFACE_SDK2"
         android:summary="@string/PREF_INSTALL_WATCHFACE_SDK2_SUMMARY"
@@ -74,6 +68,17 @@
             android:entries="@array/ORUXMAPS_AUTO_ENTRIES"
             android:entryValues="@array/ORUXMAPS_AUTO_ENTRY_VALUES"
             android:defaultValue="@string/ORUXMAPS_AUTO_DEFAULT" />
+
+</PreferenceCategory>
+
+ <PreferenceCategory
+   android:title="@string/PREF_HRM_CATEGORY_TITLE"
+ >
+    <Preference
+        android:key="PREF_HRM"
+        android:title="@string/PREF_HRM_TITLE"
+        android:summary=""
+        /> 
 
 </PreferenceCategory>
 

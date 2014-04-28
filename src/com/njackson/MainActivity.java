@@ -5,16 +5,12 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.PendingIntent;
 import android.content.*;
-import android.net.Uri;
-import android.os.BatteryManager;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
 import android.util.Log;
 import android.view.KeyEvent;
-import android.view.LayoutInflater;
-import android.view.ViewGroup;
 import android.widget.Toast;
 import com.actionbarsherlock.app.ActionBar;
 import com.actionbarsherlock.app.SherlockFragment;
@@ -29,7 +25,6 @@ import com.google.android.gms.common.GooglePlayServicesClient;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.location.ActivityRecognitionClient;
 import com.google.android.gms.location.DetectedActivity;
-import com.google.android.gms.maps.model.LatLng;
 
 import com.njackson.util.AltitudeGraphReduce;
 import de.cketti.library.changelog.ChangeLog;
@@ -37,7 +32,6 @@ import de.cketti.library.changelog.ChangeLog;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
-import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends SherlockFragmentActivity  implements  GooglePlayServicesClient.ConnectionCallbacks,
         GooglePlayServicesClient.OnConnectionFailedListener, HomeActivity.OnButtonPressListener {
@@ -50,6 +44,9 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
     public static boolean _liveTracking = false;
     public static String oruxmaps_autostart = "disable";
     
+    public static String hrm_name = "";
+    public static String hrm_address = "";
+
     public static int pebbleFirmwareVersion = 0;
     public static FirmwareVersionInfo pebbleFirmwareVersionInfo;
     
@@ -73,7 +70,10 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
     private ActivityRecognitionReceiver _activityRecognitionReceiver;
     private GPSServiceReceiver _gpsServiceReceiver;
     private boolean _googlePlayInstalled;
-    private Fragment _mapFragment;
+
+    public static VirtualPebble virtualPebble;
+
+    private boolean _batteryServiceRunning = false;
 
     enum RequestType {
         START,
@@ -107,6 +107,15 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
 
     public void loadPreferences(SharedPreferences prefs) {
         //setup the defaults
+
+        debug = prefs.getBoolean("PREF_DEBUG", false);
+
+        SharedPreferences settings = getSharedPreferences(Constants.PREFS_NAME,0);
+
+        hrm_name = settings.getString("hrm_name", "");
+        hrm_address = settings.getString("hrm_address", "");
+        if (debug) Log.d(TAG, "hrm_name:" + hrm_name + " " + hrm_address);
+
         _activityRecognition = prefs.getBoolean("ACTIVITY_RECOGNITION",false);
         _liveTracking = prefs.getBoolean("LIVE_TRACKING",false);
         oruxmaps_autostart = prefs.getString("ORUXMAPS_AUTO", "disable");
@@ -134,7 +143,6 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
         } catch (Exception e) {
             Log.e(TAG, "Exception converting REFRESH_INTERVAL:" + e);
         }
-        debug = prefs.getBoolean("PREF_DEBUG", false);
     }
 
     private void startButtonClick(boolean value) {
@@ -171,6 +179,8 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
 
         setContentView(R.layout.main);
 
+        virtualPebble = new VirtualPebble(getApplicationContext());
+
         final ActionBar actionBar = getSupportActionBar();
         actionBar.setDisplayHomeAsUpEnabled(false);
         actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_TABS);
@@ -190,11 +200,8 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
         bundle.putBoolean("LIVE_TRACKING",_liveTracking);
         bundle.putInt("UNITS_OF_MEASURE",_units);
 
-        //instantiate the map fragment and store for future use
-        //_mapFragment = Fragment.instantiate(this, "map", bundle);
 
         actionBar.addTab(actionBar.newTab().setText(R.string.TAB_TITLE_HOME).setTabListener(new TabListener<HomeActivity>(this, "home", HomeActivity.class, bundle)));
-        //actionBar.addTab(actionBar.newTab().setText(R.string.TAB_TITLE_MAP).setTabListener(new TabListener<MapActivity>(this,"map",MapActivity.class,_mapFragment,null)));
 
         if (getIntent().getExtras() != null) {
             if (getIntent().getExtras().containsKey("button")) {
@@ -204,6 +211,7 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
             }
             if (getIntent().getExtras().containsKey("version")) {
                 Log.d(TAG, "onCreate() version:" + getIntent().getExtras().getInt("version"));
+                notificationVersion(getIntent().getExtras().getInt("version"));
                 resendLastDataToPebble();
             }
             /*if (getIntent().getExtras().containsKey("live_max_name")) {
@@ -234,13 +242,32 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
         }
         Log.d(TAG, "pebbleFirmwareVersion=" + pebbleFirmwareVersion);
         
-        IntentFilter batteryLevelFilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
-        registerReceiver(batteryLevelReceiver, batteryLevelFilter);
+        if (!_batteryServiceRunning) {
+            Intent intent = new Intent(getApplicationContext(), BatteryService.class);
+            startService(intent);
+            _batteryServiceRunning = true;
+        }
     }
 
     @Override
     public void onResume() {
         super.onResume();
+        if (debug) Log.d(TAG, "onResume");
+    }
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (debug) Log.d(TAG, "onPause");
+    }
+    @Override
+    public void onDestroy() {
+    	super.onDestroy();
+
+    	Intent intent = new Intent(getApplicationContext(), BatteryService.class);
+        stopService(intent);
+        _batteryServiceRunning = false;
+
+        System.exit(0);
     }
 
     public boolean onKeyUp(int keyCode, KeyEvent event) {
@@ -264,6 +291,7 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
             }
             if (intent.getExtras().containsKey("version")) {
                 Log.d(TAG, "onNewIntent() version:" + intent.getExtras().getInt("version"));
+                notificationVersion(intent.getExtras().getInt("version"));
                 resendLastDataToPebble();
             }
             /*if (intent.getExtras().containsKey("live_max_name")) {
@@ -272,7 +300,16 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
             }*/
         }
     }
-    
+    private void notificationVersion(int version) {
+        if (version < Constants.LAST_VERSION_PEBBLE) {
+            if (debug) Log.d(TAG, "version:" + version + " min:" + Constants.MIN_VERSION_PEBBLE + " last:" + Constants.LAST_VERSION_PEBBLE);
+            String msg = "A new watchface is available. Please install it from the Pebble Bike android application settings";
+            Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_LONG).show();
+            if (version < Constants.MIN_VERSION_PEBBLE) {
+                VirtualPebble.showSimpleNotificationOnPebble("Pebble Bike", msg);
+            }
+        }
+    }
     private void changeState(int button) {
         Log.d(TAG, "changeState(button:" + button + ")");
         switch (button) {
@@ -301,7 +338,7 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
             dic.addInt32(Constants.STATE_CHANGED,Constants.STATE_STOP);
         }
         Log.d(TAG, " STATE_CHANGED: "   + dic.getInteger(Constants.STATE_CHANGED));
-        PebbleKit.sendDataToPebble(getApplicationContext(), Constants.WATCH_UUID, dic);
+        VirtualPebble.sendDataToPebble(dic);
     }
     
     private Intent _lastIntent = null;
@@ -314,6 +351,7 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
         
         PebbleDictionary dic = new PebbleDictionary();
         String sending = "Sending ";
+        boolean forceSend = false;
         
         if (intent == null) {
             Log.d(TAG, "sendDataToPebble(intent == null)");
@@ -325,12 +363,14 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
             
             dic.addInt32(Constants.MSG_VERSION_ANDROID, Constants.VERSION_ANDROID);
             sending += " MSG_VERSION_ANDROID: "   + dic.getInteger(Constants.MSG_VERSION_ANDROID);
+
+            forceSend = true;
         }
 
         if (intent != null) {
             _lastIntent = intent;
 
-            byte[] data = new byte[20];
+            byte[] data = new byte[21];
 
             data[0] = (byte) ((_units % 2) * (1<<0));
             data[0] += (byte) ((checkServiceRunning() ? 1 : 0) * (1<<1));
@@ -389,6 +429,7 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
             data[17] = (byte) (((int) (Math.floor(10 * intent.getFloatExtra("SPEED", 0.0f) * _speedConversion) / 1)) % 256);
             data[18] = (byte) (((int) (Math.floor(10 * intent.getFloatExtra("SPEED", 0.0f) * _speedConversion) / 1)) / 256);
             data[19] = (byte) (((int)  (intent.getFloatExtra("BEARING", 0.0f) / 360 * 256)) % 256);
+            data[20] = (byte) ((intent.getIntExtra("HEARTRATE", 255)) % 256);
 
             dic.addBytes(Constants.ALTITUDE_DATA, data);
             
@@ -405,7 +446,7 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
         sending += " STATE_CHANGED: "   + dic.getInteger(Constants.STATE_CHANGED);*/
 
         if (MainActivity.debug) Log.d(TAG, sending);
-        PebbleKit.sendDataToPebble(getApplicationContext(), Constants.WATCH_UUID, dic);        
+        VirtualPebble.sendDataToPebble(dic, forceSend);
     }
 
     private void updateScreen(Intent intent) {
@@ -708,7 +749,6 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
                     sendDataToPebble(intent);
                 }
                 updateScreen(intent);
-                //updateMapLocation(intent);
             } else if(intent.getAction().compareTo(ACTION_GPS_DISABLED) == 0) {
                 stopGPSService();
                 setStartButtonText("Start");
@@ -716,15 +756,6 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
             }
 
         }
-    }
-
-    private void updateMapLocation(Intent intent) {
-        // do we need to update the map
-        double lat =  intent.getDoubleExtra("LAT",0);
-        double lon = intent.getDoubleExtra("LON",0);
-        MapActivity activity = (MapActivity)getSupportFragmentManager().findFragmentByTag("map");
-        if(activity != null)
-            activity.setLocation(new LatLng(lat,lon));
     }
 
     public static class TabListener<T extends SherlockFragment> implements ActionBar.TabListener {
@@ -799,22 +830,11 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
                 return super.onOptionsItemSelected(item);
         }
     }
-    BroadcastReceiver batteryLevelReceiver = new BroadcastReceiver() {
-        public void onReceive(Context context, Intent intent) {
-            int rawlevel = intent.getIntExtra("level", -1);
-            int scale = intent.getIntExtra("scale", -1);
-            if (rawlevel >= 0 && scale > 0) {
-                batteryLevel = (rawlevel * 100) / scale;
-                sendBatteryLevel();
-            }
-            if (debug) Log.d(TAG, "battery rawlevel:" + rawlevel + " scale:" + scale + " batteryLevel:" + batteryLevel);
-         }
-    };
-    public void sendBatteryLevel() {
+    public static void sendBatteryLevel() {
         if (debug) Log.d(TAG, "sendBatteryLevel:" + batteryLevel);
         
         PebbleDictionary dic = new PebbleDictionary();
         dic.addInt32(Constants.MSG_BATTERY_LEVEL, batteryLevel);
-        PebbleKit.sendDataToPebble(getApplicationContext(), Constants.WATCH_UUID, dic);
+        VirtualPebble.sendDataToPebble(dic);
     }
 }
