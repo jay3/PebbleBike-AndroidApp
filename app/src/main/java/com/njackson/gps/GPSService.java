@@ -195,9 +195,13 @@ public class GPSService extends Service {
         _sensorManager.registerListener(_sensorListener,_sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE),SensorManager.SENSOR_DELAY_NORMAL);
     }
 
+    public void unregisterNmeaListener() {
+        Log.d(TAG, "unregisterNmeaListener");
+        _locationMgr.removeNmeaListener(_nmeaListener);
+    }
     private void stopLocationUpdates() {
         _locationMgr.removeUpdates(_locationListener);
-        _locationMgr.removeNmeaListener(_nmeaListener);
+        unregisterNmeaListener();
         _sensorManager.unregisterListener(_sensorListener);
     }
 
