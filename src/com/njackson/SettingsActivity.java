@@ -60,8 +60,6 @@ public class SettingsActivity extends PreferenceActivity implements OnSharedPref
         };
         
         Preference pref;
-        Preference pref2 = findPreference("pref_install_sdk2");
-        pref2.setOnPreferenceClickListener(pref_install_click_listener);
         Preference pref3 = findPreference("pref_reset_data");
         pref3.setOnPreferenceClickListener(pref_install_click_listener);
 
@@ -72,13 +70,6 @@ public class SettingsActivity extends PreferenceActivity implements OnSharedPref
             pref.setSummary("Pressure sensor available");
         } else {
             pref.setSummary("No pressure sensor");
-        }
-
-        pref = findPreference("PREF_GEOID_HEIGHT_INFO");
-        if (MainActivity.geoidHeight != 0) {
-            pref.setSummary("Correction: " + MainActivity.geoidHeight + "m");
-        } else {
-            pref.setSummary("No correction");
         }
 
         _setHrmSummary();
@@ -125,78 +116,7 @@ public class SettingsActivity extends PreferenceActivity implements OnSharedPref
            }
         }
     }
-    private boolean install_watchface() {
-        int versionCode;
-    
-        // Get current version code and version name
-        try {
-            PackageInfo packageInfo = getApplicationContext().getPackageManager().getPackageInfo(
-                    getApplicationContext().getPackageName(), 0);
-    
-            versionCode = packageInfo.versionCode;
-        } catch (NameNotFoundException e) {
-            versionCode = 0;
-        }
-        Log.d(TAG, "versionCode:" + versionCode);
 
-        // Get current Pebble firmware version
-        String pebbleFwVersion = "";
-        if (MainActivity.pebbleFirmwareVersionInfo != null) {
-            pebbleFwVersion = MainActivity.pebbleFirmwareVersionInfo.getMajor()
-                    + "." + MainActivity.pebbleFirmwareVersionInfo.getMinor()
-                    + "." + MainActivity.pebbleFirmwareVersionInfo.getPoint()
-                    + "-" + MainActivity.pebbleFirmwareVersionInfo.getTag();
-        }
-        Log.d(TAG, "pebbleFwVersion:" + pebbleFwVersion);
-        
-        try {
-            String uriString = "http://dl.pebblebike.com/p/pebblebike-1.5.0";
-            uriString += ".pbw?and&v=" + versionCode;
-            uriString += "&p=" + pebbleFwVersion;
-            Log.d(TAG, "uriString:" + uriString);
-            Uri uri = Uri.parse(uriString);
-            Intent startupIntent = new Intent();
-            startupIntent.setAction(Intent.ACTION_VIEW);
-            startupIntent.setType("application/octet-stream");
-            startupIntent.setData(uri);
-            ComponentName distantActivity = new ComponentName("com.getpebble.android", "com.getpebble.android.ui.UpdateActivity");
-            startupIntent.setComponent(distantActivity);
-            startActivity(startupIntent);
-        } catch (ActivityNotFoundException ae) {
-            Toast.makeText(getApplicationContext(),"Unable to install watchface, do you have the latest pebble app installed?",Toast.LENGTH_LONG).show();
-            return false;
-        }
-        return true;
-    }
-    
-    private void _setUnitsSummary(SharedPreferences prefs) {
-        String units = prefs.getString("UNITS_OF_MEASURE", "0");
-        Preference unitsPref = findPreference("UNITS_OF_MEASURE");
-        unitsPref.setSummary(units.equals("0") ? getString(R.string.PREF_UNITS_UNIT_IMPERIAL) : getString(R.string.PREF_UNITS_UNIT_METRIC));
-    }
-    private void _setRefreshSummary(SharedPreferences prefs) {
-        try {
-            int refresh_interval = Integer.valueOf(prefs.getString("REFRESH_INTERVAL", "1000"));
-            Preference refreshPref = findPreference("REFRESH_INTERVAL");
-            if (refresh_interval < 1000) {
-                refreshPref.setSummary(refresh_interval + " ms");
-            } else {
-                refreshPref.setSummary(refresh_interval/1000 + " s");
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Exception converting REFRESH_INTERVAL:" + e);
-        }
-    }
-    private void _setLoginJaypsSummary(SharedPreferences prefs) {
-        String login = prefs.getString("LIVE_TRACKING_LOGIN", "");
-        Preference loginPref = findPreference("LIVE_TRACKING_LOGIN");
-        loginPref.setSummary(login);
-    }
-    private void _setLoginMmtSummary(SharedPreferences prefs) {
-        String login = prefs.getString("LIVE_TRACKING_MMT_LOGIN", "");
-        Preference loginPref = findPreference("LIVE_TRACKING_MMT_LOGIN");
-        loginPref.setSummary(login);
-    }    
     private void _setOruxMapsSummary(SharedPreferences prefs) {
         ListPreference oruxPref = (ListPreference) findPreference("ORUXMAPS_AUTO");
         CharSequence listDesc = oruxPref.getEntry();
@@ -219,28 +139,6 @@ public class SettingsActivity extends PreferenceActivity implements OnSharedPref
         loginPref.setSummary(summary);
     }
 
-	@Override
-    protected void onResume() {
-        super.onResume();
-        // Set up a listener whenever a key changes
-        getPreferenceScreen().getSharedPreferences()
-                .registerOnSharedPreferenceChangeListener(this);
-        
-        _setUnitsSummary(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()));
-        _setRefreshSummary(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()));
-        _setLoginJaypsSummary(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()));
-        _setLoginMmtSummary(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()));
-        _setOruxMapsSummary(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()));
-        _setCanvasSummary(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()));
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        // Unregister the listener whenever a key changes
-        getPreferenceScreen().getSharedPreferences()
-                .unregisterOnSharedPreferenceChangeListener(this);
-    }
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
         
         if (key.equals("UNITS_OF_MEASURE")) {
@@ -248,12 +146,6 @@ public class SettingsActivity extends PreferenceActivity implements OnSharedPref
         }        
         if (key.equals("REFRESH_INTERVAL")) {
             _setRefreshSummary(sharedPreferences);
-        }
-        if (key.equals("LIVE_TRACKING_LOGIN")) {
-            _setLoginJaypsSummary(sharedPreferences);
-        }
-        if (key.equals("LIVE_TRACKING_MMT_LOGIN")) {
-            _setLoginMmtSummary(sharedPreferences);
         }
         if (key.equals("ORUXMAPS_AUTO")) {
             _setOruxMapsSummary(sharedPreferences);

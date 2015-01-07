@@ -57,7 +57,7 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
     private static int _units = Constants.IMPERIAL;
     
     private long _sendDataToPebbleLastTime = 0;
-    private static int _refresh_interval = 1000;
+    public static int _refresh_interval = 1000;
     // Height of geoid above WGS84 ellipsoid
     public static double geoidHeight = 0; // in m
     public static int batteryLevel = -1;

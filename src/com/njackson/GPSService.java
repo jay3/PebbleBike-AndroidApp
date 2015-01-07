@@ -253,7 +253,15 @@ public class GPSService extends Service {
 
         // check to see if GPS is enabled
         if(checkGPSEnabled(_locationMgr)) {
-            _requestLocationUpdates(intent.getIntExtra("REFRESH_INTERVAL", 1000));
+            
+            int refresh_interval = 1000;
+            if (intent != null) {
+                refresh_interval = intent.getIntExtra("REFRESH_INTERVAL", 1000);
+            } else {
+                Log.e(TAG, "handleCommand: intent == null");
+                refresh_interval = MainActivity._refresh_interval;
+            }
+            _requestLocationUpdates(refresh_interval);
 
             SharedPreferences settings = getSharedPreferences(Constants.PREFS_NAME,0);
             
@@ -329,11 +337,7 @@ public class GPSService extends Service {
         _gpsStarted = true;
     }
 
-    @Override
-    public IBinder onBind(Intent intent) {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
-    }
-    
+
     private LocationManager _locationMgr = null;
     private LocationListener onLocationChange = new LocationListener() {
         @Override
@@ -404,24 +408,7 @@ public class GPSService extends Service {
             }
             
         }
-
-        @Override
-        public void onProviderDisabled(String arg0) {
-            // TODO Auto-generated method stub
-            
-        }
-
-        @Override
-        public void onProviderEnabled(String arg0) {
-            // TODO Auto-generated method stub
-            
-        }
-
-        @Override
-        public void onStatusChanged(String arg0, int arg1, Bundle arg2) {
-            // TODO Auto-generated method stub
-            
-        }        
+     
     };
 
     NmeaListener mNmeaListener = new NmeaListener() {
@@ -509,27 +496,6 @@ public class GPSService extends Service {
         sendBroadcast(broadcastIntent);
     }
 
-    private void makeServiceForeground(String titre, String texte) {
-        //http://stackoverflow.com/questions/3687200/implement-startforeground-method-in-android
-        final int myID = 1000;
-
-        //The intent to launch when the user clicks the expanded notification
-        Intent i = new Intent(this, MainActivity.class);
-
-        i.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        PendingIntent pendIntent = PendingIntent.getActivity(this, 0, i, 0);
-
-        // The following code is deprecated since API 11 (Android 3.x). Notification.Builder could be used instead, but without Android 2.x compatibility 
-        Notification notification = new Notification(R.drawable.ic_launcher, "Pebble Bike", System.currentTimeMillis());
-        notification.setLatestEventInfo(this, titre, texte, pendIntent);
-
-        notification.flags |= Notification.FLAG_NO_CLEAR;
-
-        startForeground(myID, notification);
-    }
-    private void removeServiceForeground() {
-        stopForeground(true);
-    }
 
     private final ServiceConnection mServiceConnection = new ServiceConnection() {
 
