@@ -308,11 +308,9 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
         switch (button) {
             case Constants.STOP_PRESS:
                 stopGPSService();
-                setStartButtonText("Start");
                 break;
             case Constants.PLAY_PRESS:
                 startGPSService();
-                setStartButtonText("Stop");
                 break;
             case Constants.REFRESH_PRESS:
                 ResetSavedGPSStats();
@@ -322,18 +320,7 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
 
 
 
-    private void sendServiceState() {
-    	Log.d(TAG, "sendServiceState()");
-    	PebbleDictionary dic = new PebbleDictionary();
-        if(checkServiceRunning()) {
-            dic.addInt32(Constants.STATE_CHANGED,Constants.STATE_START);
-        } else {
-            dic.addInt32(Constants.STATE_CHANGED,Constants.STATE_STOP);
-        }
-        Log.d(TAG, " STATE_CHANGED: "   + dic.getInteger(Constants.STATE_CHANGED));
-        VirtualPebble.sendDataToPebble(dic);
-    }
-    
+  
     private Intent _lastIntent = null;
     private void resendLastDataToPebble() {
         sendBatteryLevel();
@@ -575,8 +562,6 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
             removeGPSServiceIntentReceiver();
             stopService(new Intent(getApplicationContext(), GPSService.class));
         }
-        // in all cases
-        sendServiceState();
     }
 
     private void registerGPSServiceIntentReceiver() {
@@ -591,10 +576,6 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
         registerReceiver(_gpsServiceReceiver, filterDisabled);
     }
 
-    private void removeGPSServiceIntentReceiver() {
-        if(_gpsServiceReceiver != null)
-            unregisterReceiver(_gpsServiceReceiver);
-    }
 
     private void checkGooglePlayServices() {
         // check to see that google play services are installed and up to date

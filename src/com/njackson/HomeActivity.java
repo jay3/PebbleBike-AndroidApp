@@ -171,15 +171,6 @@ public class HomeActivity extends SherlockFragment {
         //textView.setText("Activity: " + activity);
     }
 
-    public void setStartButtonText(String text) {
-        Button button = (Button)_view.findViewById(R.id.MAIN_START_BUTTON);
-        button.setText(text);
-        if (text.equals("Start")) {
-        	button.setBackgroundColor(getResources().getColor(R.color.START_START));
-        } else {
-        	button.setBackgroundColor(getResources().getColor(R.color.START_STOP));
-        }        
-    }
 
     public void setSpeed(String text) {
         TextView textView = (TextView)_view.findViewById(R.id.MAIN_SPEED_TEXT);
