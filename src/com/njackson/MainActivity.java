@@ -212,22 +212,6 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
 
         actionBar.addTab(actionBar.newTab().setText(R.string.TAB_TITLE_HOME).setTabListener(new TabListener<HomeActivity>(this, "home", HomeActivity.class, bundle)));
 
-        if (getIntent().getExtras() != null) {
-            if (getIntent().getExtras().containsKey("button")) {
-                Log.d(TAG, "onCreate() button:" + getIntent().getExtras().getInt("button"));
-            
-                changeState(getIntent().getExtras().getInt("button"));
-            }
-            if (getIntent().getExtras().containsKey("version")) {
-                Log.d(TAG, "onCreate() version:" + getIntent().getExtras().getInt("version"));
-                notificationVersion(getIntent().getExtras().getInt("version"));
-                resendLastDataToPebble();
-            }
-            /*if (getIntent().getExtras().containsKey("live_max_name")) {
-                Log.d(TAG, "onNewIntent() live_max_name:" + getIntent().getExtras().getInt("live_max_name"));
-                GPSService.liveSendNames(getIntent().getExtras().getInt("live_max_name"));
-            }*/
-        }
         
         // try to get Pebble Watch Firmware version
         try {
@@ -271,53 +255,6 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
         return super.onKeyUp(keyCode, event);
     }    
     
-    // This is called for activities that set launchMode to "singleTop" in their package, or if a client used the FLAG_ACTIVITY_SINGLE_TOP flag when calling startActivity(Intent).
-    // In either case, when the activity is re-launched while at the top of the activity stack instead of a new instance of the activity being started, onNewIntent() will be called 
-    // on the existing instance with the Intent that was used to re-launch it.
-    // An activity will always be paused before receiving a new intent, so you can count on onResume() being called after this method. 
-    protected void onNewIntent (Intent intent) {
-        if (intent.getExtras() != null) {
-            if (intent.getExtras().containsKey("button")) {
-                Log.d(TAG, "onNewIntent() button:" + intent.getExtras().getInt("button"));
-            
-                changeState(intent.getExtras().getInt("button"));
-            }
-            if (intent.getExtras().containsKey("version")) {
-                Log.d(TAG, "onNewIntent() version:" + intent.getExtras().getInt("version"));
-                notificationVersion(intent.getExtras().getInt("version"));
-                resendLastDataToPebble();
-            }
-            /*if (intent.getExtras().containsKey("live_max_name")) {
-                Log.d(TAG, "onNewIntent() live_max_name:" + intent.getExtras().getInt("live_max_name"));
-                GPSService.liveSendNames(intent.getExtras().getInt("live_max_name"));
-            }*/
-        }
-    }
-    private void notificationVersion(int version) {
-        if (version < Constants.LAST_VERSION_PEBBLE) {
-            if (debug) Log.d(TAG, "version:" + version + " min:" + Constants.MIN_VERSION_PEBBLE + " last:" + Constants.LAST_VERSION_PEBBLE);
-            String msg = "A new watchface is available. Please install it from the Pebble Bike android application settings";
-            Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_LONG).show();
-            if (version < Constants.MIN_VERSION_PEBBLE) {
-                VirtualPebble.showSimpleNotificationOnPebble("Pebble Bike", msg);
-            }
-        }
-    }
-    private void changeState(int button) {
-        Log.d(TAG, "changeState(button:" + button + ")");
-        switch (button) {
-            case Constants.STOP_PRESS:
-                stopGPSService();
-                break;
-            case Constants.PLAY_PRESS:
-                startGPSService();
-                break;
-            case Constants.REFRESH_PRESS:
-                ResetSavedGPSStats();
-                break;
-        }        
-    }
-
 
 
   
