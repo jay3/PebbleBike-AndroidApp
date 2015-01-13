@@ -24,15 +24,6 @@ public class PebbleDataReceiver extends com.getpebble.android.kit.PebbleKit.Pebb
     	if (data.contains(Constants.CMD_BUTTON_PRESS)) {
 	        button = data.getUnsignedIntegerAsLong(Constants.CMD_BUTTON_PRESS).intValue();
 	        Log.d(TAG, "Constants.CMD_BUTTON_PRESS, button: " + button);
-	        if (button == Constants.ORUXMAPS_START_RECORD_CONTINUE_PRESS) {
-	            OruxMaps.startRecordNewSegment(context);
-	        } else if (button == Constants.ORUXMAPS_STOP_RECORD_PRESS) {
-	            OruxMaps.stopRecord(context);
-	        } else if (button == Constants.ORUXMAPS_NEW_WAYPOINT_PRESS) {
-                OruxMaps.newWaypoint(context);
-	        } else {
-	            start = true;
-	        }
     	}    	
         if (data.contains(Constants.MSG_VERSION_PEBBLE)) {
             version = data.getInteger(Constants.MSG_VERSION_PEBBLE).intValue();
