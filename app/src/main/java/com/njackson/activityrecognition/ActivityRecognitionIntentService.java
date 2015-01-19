@@ -50,7 +50,7 @@ public class ActivityRecognitionIntentService extends IntentService {
 
         if (ActivityRecognitionResult.hasResult(intent)) {
             ActivityRecognitionResult result = ActivityRecognitionResult.extractResult(intent);
-            String type = "def"+result.getMostProbableActivity().getType();
+            String type = "";
             switch(result.getMostProbableActivity().getType()) {
 
                 case DetectedActivity.ON_BICYCLE:
@@ -75,10 +75,23 @@ public class ActivityRecognitionIntentService extends IntentService {
                 case DetectedActivity.STILL:
                     Log.d(TAG, "STILL");
                     type = "STILL";
-
                     sendReply(result.getMostProbableActivity().getType());
+                case DetectedActivity.IN_VEHICLE:
+                    Log.d(TAG, "IN_VEHICLE");
+                    type = "IN_VEHICLE";
+                    break;
+                case DetectedActivity.ON_FOOT:
+                    Log.d(TAG, "ON_FOOT");
+                    type = "ON_FOOT";
+                    break;
+                case DetectedActivity.UNKNOWN:
+                    Log.d(TAG, "UNKNOWN");
+                    //type = "UNKNOWN";
+                    break;
+                default:
+                    type = "def" + result.getMostProbableActivity().getType();
             }
-            if (!type.equals(_type)) {
+            if (!type.equals(_type) && !type.equals("")) {
                 _type = type;
                 if (_sharedPreferences.getBoolean("PREF_DEBUG", false)) {
                     sendMessageToPebble(type);
