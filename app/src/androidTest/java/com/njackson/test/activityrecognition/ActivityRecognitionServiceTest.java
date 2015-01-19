@@ -205,7 +205,7 @@ public class ActivityRecognitionServiceTest extends ServiceTestCase<ActivityReco
         when(_sharedPreferences.getBoolean("ACTIVITY_RECOGNITION",false)).thenReturn(true);
 
         startService();
-        _bus.post(new NewActivityEvent(DetectedActivity.ON_FOOT));
+        _bus.post(new NewActivityEvent(DetectedActivity.ON_FOOT, 100));
 
         verify(_serviceStarter,timeout(2000).times(1)).startLocationServices();
     }
@@ -215,7 +215,7 @@ public class ActivityRecognitionServiceTest extends ServiceTestCase<ActivityReco
         when(_sharedPreferences.getBoolean("ACTIVITY_RECOGNITION",false)).thenReturn(false);
 
         startService();
-        _bus.post(new NewActivityEvent(DetectedActivity.ON_FOOT));
+        _bus.post(new NewActivityEvent(DetectedActivity.ON_FOOT,100 ));
 
         verify(_serviceStarter,timeout(2000).times(0)).startLocationServices();
     }
@@ -225,7 +225,7 @@ public class ActivityRecognitionServiceTest extends ServiceTestCase<ActivityReco
         when(_sharedPreferences.getBoolean("ACTIVITY_RECOGNITION",false)).thenReturn(true);
 
         startService();
-        _bus.post(new NewActivityEvent(DetectedActivity.STILL));
+        _bus.post(new NewActivityEvent(DetectedActivity.STILL, 100));
 
         verify(_mockTimer,timeout(2000).times(1)).setTimer(anyLong(),any(ActivityRecognitionService.class));
     }
@@ -235,7 +235,7 @@ public class ActivityRecognitionServiceTest extends ServiceTestCase<ActivityReco
         when(_sharedPreferences.getBoolean("ACTIVITY_RECOGNITION",false)).thenReturn(false);
 
         startService();
-        _bus.post(new NewActivityEvent(DetectedActivity.STILL));
+        _bus.post(new NewActivityEvent(DetectedActivity.STILL, 100));
 
         verify(_mockTimer,timeout(2000).times(0)).setTimer(anyLong(),any(ActivityRecognitionService.class));
     }
@@ -247,7 +247,7 @@ public class ActivityRecognitionServiceTest extends ServiceTestCase<ActivityReco
         startService();
 
         when(_mockTimer.getActive()).thenReturn(true);
-        _bus.post(new NewActivityEvent(DetectedActivity.STILL));
+        _bus.post(new NewActivityEvent(DetectedActivity.STILL, 100));
 
         verify(_mockTimer,timeout(2000).times(0)).setTimer(anyLong(),any(ActivityRecognitionService.class));
     }
@@ -257,7 +257,7 @@ public class ActivityRecognitionServiceTest extends ServiceTestCase<ActivityReco
         when(_sharedPreferences.getBoolean("ACTIVITY_RECOGNITION",false)).thenReturn(true);
 
         startService();
-        _bus.post(new NewActivityEvent(DetectedActivity.ON_FOOT));
+        _bus.post(new NewActivityEvent(DetectedActivity.ON_FOOT, 100));
 
         verify(_mockTimer,timeout(2000).times(1)).cancel();
     }

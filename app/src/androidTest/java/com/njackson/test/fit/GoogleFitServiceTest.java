@@ -229,7 +229,7 @@ public class GoogleFitServiceTest extends ServiceTestCase<GoogleFitService> {
         startService();
 
         _service.onConnected(new Bundle());
-        _bus.post(new NewActivityEvent(DetectedActivity.RUNNING));
+        _bus.post(new NewActivityEvent(DetectedActivity.RUNNING, 100));
 
         verify(_mockSessionManager, timeout(2000).times(1)).addDataPoint(anyLong(),anyInt());
     }
@@ -239,7 +239,7 @@ public class GoogleFitServiceTest extends ServiceTestCase<GoogleFitService> {
         startService();
 
         _service.onConnected(new Bundle());
-        _bus.post(new NewActivityEvent(DetectedActivity.ON_BICYCLE));
+        _bus.post(new NewActivityEvent(DetectedActivity.ON_BICYCLE, 100));
 
         verify(_mockSessionManager, timeout(2000).times(1)).addDataPoint(anyLong(),anyInt());
     }
@@ -249,7 +249,7 @@ public class GoogleFitServiceTest extends ServiceTestCase<GoogleFitService> {
         startService();
 
         _service.onConnected(new Bundle());
-        _bus.post(new NewActivityEvent(DetectedActivity.WALKING));
+        _bus.post(new NewActivityEvent(DetectedActivity.WALKING, 100));
 
         verify(_mockSessionManager, timeout(2000).times(1)).addDataPoint(anyLong(),anyInt());
     }
@@ -259,7 +259,7 @@ public class GoogleFitServiceTest extends ServiceTestCase<GoogleFitService> {
         startService();
 
         _service.onConnected(new Bundle());
-        _bus.post(new NewActivityEvent(DetectedActivity.STILL));
+        _bus.post(new NewActivityEvent(DetectedActivity.STILL, 100));
 
         verify(_mockSessionManager, timeout(2000).times(0)).addDataPoint(anyLong(),anyInt());
     }

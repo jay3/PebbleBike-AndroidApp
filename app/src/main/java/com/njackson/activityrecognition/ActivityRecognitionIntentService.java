@@ -2,10 +2,10 @@ package com.njackson.activityrecognition;
 
 import android.app.IntentService;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.util.Log;
 
 import com.google.android.gms.location.ActivityRecognitionResult;
-import com.google.android.gms.location.DetectedActivity;
 import com.njackson.application.PebbleBikeApplication;
 import com.njackson.events.ActivityRecognitionService.NewActivityEvent;
 import com.squareup.otto.Bus;
@@ -23,6 +23,7 @@ public class ActivityRecognitionIntentService extends IntentService {
 
     private static final String TAG = "PB-ActivityRecognitionIntentService";
     @Inject Bus _bus;
+    @Inject SharedPreferences _sharedPreferences;
 
     public ActivityRecognitionIntentService() {
         super("ActivityRecognitionIntentService");
@@ -38,44 +39,12 @@ public class ActivityRecognitionIntentService extends IntentService {
 
         if (ActivityRecognitionResult.hasResult(intent)) {
             ActivityRecognitionResult result = ActivityRecognitionResult.extractResult(intent);
-
-            switch(result.getMostProbableActivity().getType()) {
-
-                case DetectedActivity.ON_BICYCLE:
-                    Log.d(TAG, "ON_BICYCLE");
-                    sendReply(result.getMostProbableActivity().getType());
-                    break;
-                case DetectedActivity.WALKING:
-                    Log.d(TAG, "WALKING");
-                    sendReply(result.getMostProbableActivity().getType());
-                    break;
-                case DetectedActivity.RUNNING:
-                    Log.d(TAG, "RUNNING");
-                    sendReply(result.getMostProbableActivity().getType());
-                    break;
-                case DetectedActivity.TILTING:
-                    Log.d(TAG, "TILTING");
-                    break;
-                case DetectedActivity.STILL:
-                    Log.d(TAG, "STILL");
-                    sendReply(result.getMostProbableActivity().getType());
-                    break;
-                case DetectedActivity.ON_FOOT:
-                    Log.d(TAG, "ON_FOOT");
-                    sendReply(result.getMostProbableActivity().getType());
-                    break;
-                case DetectedActivity.IN_VEHICLE:
-                    Log.d(TAG, "IN_VEHICLE");
-                    sendReply(result.getMostProbableActivity().getType());
-                    break;
-                case DetectedActivity.UNKNOWN:
-                    break;
-            }
-        }
+            sendReply(result.getMostProbableActivity().getType(), result.getMostProbableActivity().getConfidence());
+         }
     }
 
-    private void sendReply(int type) {
-        _bus.post(new NewActivityEvent(type));
+    private void sendReply(int type, int confidence) {
+        _bus.post(new NewActivityEvent(type, confidence));
     }
 
 }
