@@ -44,8 +44,8 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
     public static boolean _liveTrackingJayps = false;
     public static boolean _liveTrackingMmt = false;
     public static String oruxmaps_autostart = "disable";
-    public static String canvas_mode = "disable";
-    public static boolean canvas_display_units = true;
+    // public static String canvas_mode = "disable";
+    // public static boolean canvas_display_units = true;
     
     public static String hrm_name = "";
     public static String hrm_address = "";
@@ -123,9 +123,9 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
         _activityRecognition = prefs.getBoolean("ACTIVITY_RECOGNITION",false);
         _liveTrackingJayps = prefs.getBoolean("LIVE_TRACKING",false);
         _liveTrackingMmt = prefs.getBoolean("LIVE_TRACKING_MMT",false);
-        oruxmaps_autostart = prefs.getString("ORUXMAPS_AUTO", "disable");
-        canvas_mode = prefs.getString("CANVAS_MODE", "disable");
-        canvas_display_units = prefs.getBoolean("CANVAS_DISPLAY_UNITS", true);
+        // oruxmaps_autostart = prefs.getString("ORUXMAPS_AUTO", "disable");
+        // canvas_mode = prefs.getString("CANVAS_MODE", "disable");
+        // canvas_display_units = prefs.getBoolean("CANVAS_DISPLAY_UNITS", true);
         
 
         if(_activityRecognition)
@@ -482,9 +482,9 @@ public class MainActivity extends SherlockFragmentActivity  implements  GooglePl
             registerGPSServiceIntentReceiver();
             startService(intent);
             
-            if (!MainActivity.canvas_mode.equals("canvas_only")) {
-                PebbleKit.startAppOnPebble(getApplicationContext(), Constants.WATCH_UUID);
-            }
+            // if (!MainActivity.canvas_mode.equals("canvas_only")) {
+            //     PebbleKit.startAppOnPebble(getApplicationContext(), Constants.WATCH_UUID);
+            // }
         }
         // in all cases
         resendLastDataToPebble();

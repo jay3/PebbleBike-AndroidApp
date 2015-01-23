@@ -52,7 +52,7 @@
             </intent-filter>
         </receiver>
         
-        <receiver android:exported="true" android:name=".CanvasPlugin">
+<!--         <receiver android:exported="true" android:name=".CanvasPlugin">
             <intent-filter>
                 <action android:name="com.pennas.pebblecanvas.plugin.REQUEST_DEFINITIONS">
                 <action android:name="com.pennas.pebblecanvas.plugin.REQUEST_UPDATE">
@@ -62,7 +62,7 @@
         <receiver android:name=".CanvasPluginReceiver">
             <intent-filter>
                 <action android:name="com.njackson.intent.action.UPDATE_PEBBLE" />
-            </intent-filter>
+            </intent-filter> -->
         </receiver>
     </application>
 </manifest>

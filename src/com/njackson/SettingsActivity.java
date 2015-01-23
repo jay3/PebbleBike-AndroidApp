@@ -61,21 +61,4 @@ public class SettingsActivity extends PreferenceActivity implements OnSharedPref
 
     }
 
-    private void _setCanvasSummary(SharedPreferences prefs) {
-        ListPreference canvasPref = (ListPreference) findPreference("CANVAS_MODE");
-        CharSequence listDesc = canvasPref.getEntry();
-        canvasPref.setSummary(listDesc);
-    }
-
-    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
-        
-        if (key.equals("CANVAS_MODE")) {
-            _setCanvasSummary(sharedPreferences);
-        }
-
-        MainActivity activity = MainActivity.getInstance();
-        if(activity != null)
-            activity.loadPreferences(sharedPreferences);
-    }
-
 }
